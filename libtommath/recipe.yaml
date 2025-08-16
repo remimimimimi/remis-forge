@@ -1,0 +1,20 @@
+context:
+  name: "libtommath"
+  version: "1.3.0"
+
+package:
+  name: ${{ name }}
+  version: ${{ version }}
+
+source:
+  url: https://github.com/libtom/${{ name }}/releases/download/v${{ version }}/ltm-${{ version }}.tar.xz
+  sha256: 296272d93435991308eb73607600c034b558807a07e829e751142e65ccfa9d08
+
+build:
+  script: |
+    make -f makefile.shared test install
+
+requirements:
+  build:
+    - ${{ compiler("c") }}
+    - libtool
