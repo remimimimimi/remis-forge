@@ -4,7 +4,7 @@ context:
 
 package:
   name: ${{ name }}
-  version: ${{ version }}
+  version: ${{ version }}_with_run_exports
 
 source:
   url: https://github.com/libtom/${{ name }}/releases/download/v${{ version }}/ltm-${{ version }}.tar.xz
@@ -12,9 +12,12 @@ source:
 
 build:
   script: |
-    make -f makefile.shared test install
+    make -j$CPU_COUNT -f makefile.shared test install
 
 requirements:
   build:
     - ${{ compiler("c") }}
     - libtool
+  run_exports:
+    strong:
+      - ${{ pin_subpackage("libtommath", upper_bound="x.x.x") }}
