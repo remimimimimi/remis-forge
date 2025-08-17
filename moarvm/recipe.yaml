@@ -27,12 +27,8 @@ requirements:
     - zstd
     - libuv
     - libffi
-  run:
-    - libtommath
-    - mimalloc
-    - zstd
-    - libuv
-    - libffi
+  run_exports:
+    - ${{ pin_subpackage("moarvm", exact=True) }}
 
 tests:
   - script:

@@ -4,7 +4,7 @@ context:
 
 package:
   name: ${{ name }}
-  version: ${{ version }}_with_run_exports
+  version: ${{ version }}
 
 source:
   url: https://github.com/libtom/${{ name }}/releases/download/v${{ version }}/ltm-${{ version }}.tar.xz

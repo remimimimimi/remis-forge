@@ -46,12 +46,12 @@ jobs:
             --skip-existing=all --target-platform=${{ matrix.target }} \
             -c conda-forge -c https://prefix.dev/remis-forge
 
-      # - name: Upload all packages
-      #   shell: bash
-      #   # do not upload on PR
-      #   if: github.event_name == 'push'
-      #   run: |
-      #     # uses trusted publishers for the upload
-      #     for file in output/**/*.conda; do
-      #       rattler-build upload prefix -c rust-forge "$file"
-      #     done
+      - name: Upload all packages
+        shell: bash
+        # do not upload on PR
+        if: github.event_name == 'push'
+        run: |
+          # uses trusted publishers for the upload
+          for file in output/**/*.conda; do
+            rattler-build upload prefix -c remis-forge "$file"
+          done

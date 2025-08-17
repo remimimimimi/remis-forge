@@ -1,0 +1,58 @@
+context:
+  name: "nqp"
+  version: "2025.06"
+
+package:
+  name: ${{ name|lower }}
+  version: ${{ version }}
+
+source:
+  url: https://github.com/Raku/${{ name }}/releases/download/${{ version }}/${{ name }}-${{ version }}.tar.gz
+  sha256: cfb396d6d0114d00f0dc2de4cf5f424fa72968e53c9c7cb75690bcdfd45bfcc5
+
+build:
+  script: |
+    set -euxo pipefail
+    perl Configure.pl --backend=moar --prefix="$PREFIX"
+    make -j${CPU_COUNT}
+    make install
+
+    # Sanity: the bytecode that implements the CLI must exist
+    test -f "$PREFIX/share/nqp/lib/nqp.moarvm" || {
+      echo "ERROR: nqp.moarvm not installed under \$PREFIX/share/nqp/lib"; exit 1; }
+
+    # Keep the upstream launcher (if it exists) for debugging
+    if [ -x "$PREFIX/bin/nqp" ] && file "$PREFIX/bin/nqp" | grep -q ELF; then
+      mv "$PREFIX/bin/nqp" "$PREFIX/bin/nqp-upstream"
+    fi
+
+    # Launcher wrapper that makes nqp find proper paths. Original one is quite buggy.
+    cat > "$PREFIX/bin/nqp" <<'EOF'
+    #!/usr/bin/env bash
+    set -e
+    # Resolve runtime root (prefer active env; fallback to relative to this script)
+    if [ -n "${PREFIX:-}" ]; then
+      RUNTIME="$PREFIX/share/nqp"
+    else
+      # works in rattler/conda-style prefixes and plain installs
+      RUNTIME="$(cd "$(dirname "$0")/.."; pwd)/share/nqp"
+    fi
+    exec moar --libpath="$RUNTIME/lib" "$RUNTIME/lib/nqp.moarvm" "$@"
+    EOF
+    chmod +x "$PREFIX/bin/nqp"
+
+requirements:
+  build:
+    - ${{ compiler("c") }}
+    - pkgconf
+    - if: win
+      then: perl
+  host:
+    - moarvm
+  run_exports:
+    - ${{ pin_subpackage("nqp", exact=True) }}
+
+tests:
+  - script:
+      - nqp -e 'say("Hello from NQP")'
+      - out=$(nqp -e 'say(40+2)'); test "$out" = "42"
