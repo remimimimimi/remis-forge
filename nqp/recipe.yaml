@@ -11,35 +11,51 @@ source:
   sha256: cfb396d6d0114d00f0dc2de4cf5f424fa72968e53c9c7cb75690bcdfd45bfcc5
 
 build:
+  number: 1
   script: |
     set -euxo pipefail
-    perl Configure.pl --backend=moar --prefix="$PREFIX"
+    perl Configure.pl --backends=moar --prefix="$PREFIX" --with-moar="$(which moar)"
     make -j${CPU_COUNT}
     make install
 
-    # Sanity: the bytecode that implements the CLI must exist
     test -f "$PREFIX/share/nqp/lib/nqp.moarvm" || {
       echo "ERROR: nqp.moarvm not installed under \$PREFIX/share/nqp/lib"; exit 1; }
 
-    # Keep the upstream launcher (if it exists) for debugging
     if [ -x "$PREFIX/bin/nqp" ] && file "$PREFIX/bin/nqp" | grep -q ELF; then
       mv "$PREFIX/bin/nqp" "$PREFIX/bin/nqp-upstream"
     fi
 
-    # Launcher wrapper that makes nqp find proper paths. Original one is quite buggy.
+    # We replace `nqp` and `nqp-m` with manual wrappers over `moarvm`
+    # to specify correct paths. Ideally we would patch original
+    # binaries, but this way seemed simpler.
+
     cat > "$PREFIX/bin/nqp" <<'EOF'
     #!/usr/bin/env bash
     set -e
-    # Resolve runtime root (prefer active env; fallback to relative to this script)
     if [ -n "${PREFIX:-}" ]; then
       RUNTIME="$PREFIX/share/nqp"
     else
-      # works in rattler/conda-style prefixes and plain installs
       RUNTIME="$(cd "$(dirname "$0")/.."; pwd)/share/nqp"
     fi
     exec moar --libpath="$RUNTIME/lib" "$RUNTIME/lib/nqp.moarvm" "$@"
     EOF
     chmod +x "$PREFIX/bin/nqp"
+
+    if [ -x "$PREFIX/bin/nqp-m" ] && file "$PREFIX/bin/nqp-m" | grep -q ELF; then
+      mv "$PREFIX/bin/nqp-m" "$PREFIX/bin/nqp-m-upstream"
+    fi
+
+    cat > "$PREFIX/bin/nqp-m" <<'EOF'
+    #!/usr/bin/env bash
+    set -e
+    if [ -n "${PREFIX:-}" ]; then
+      RUNTIME="$PREFIX/share/nqp"
+    else
+      RUNTIME="$(cd "$(dirname "$0")/.."; pwd)/share/nqp"
+    fi
+    exec moar --libpath="$RUNTIME/lib" "$RUNTIME/lib/nqpmo.moarvm" "$@"
+    EOF
+    chmod +x "$PREFIX/bin/nqp-m"
 
 requirements:
   build:
@@ -47,6 +63,7 @@ requirements:
     - pkgconf
     - if: win
       then: perl
+    - moarvm
   host:
     - moarvm
   run_exports:
@@ -56,3 +73,6 @@ tests:
   - script:
       - nqp -e 'say("Hello from NQP")'
       - out=$(nqp -e 'say(40+2)'); test "$out" = "42"
+    requirements:
+        run:
+          - moarvm
