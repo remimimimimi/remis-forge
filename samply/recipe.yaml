@@ -1,0 +1,47 @@
+context:
+  git_rev: "f6ff5dedc73ab84a8ef45231f41cd3e721fb5cd4"
+
+package:
+  name: samply
+  version: 0.13.1_${{ git_rev[:7] }}
+
+source:
+  git: https://github.com/mstange/samply.git
+  rev: ${{ git_rev }}
+
+build:
+  number: 0
+  script:
+    - cargo-bundle-licenses --format yaml --output ${SRC_DIR}/THIRDPARTY.yml
+    - $BUILD_PREFIX/bin/cargo install --locked --bins --root ${PREFIX} --path samply
+requirements:
+  build:
+    - ${{ compiler('rust') }}
+    - cargo-bundle-licenses
+
+tests:
+  - script:
+    - samply --help
+    - samply --version
+
+about:
+  homepage: https://github.com/mstange/samply
+  license: MIT OR Apache-2.0
+  license_file:
+    - LICENSE-APACHE
+    - LICENSE-MIT
+    - THIRDPARTY.yml
+  summary: Command-line sampling profiler for macOS, Linux, and Windows
+  description: |
+    samply is a command line CPU profiler which uses the Firefox Profiler UI.
+    It runs on macOS, Linux and Windows.
+
+    samply gathers CPU sampling profiling data and opens the Firefox Profiler
+    in your default browser for visualization. The profiling data stays on your
+    local machine; an internet connection is only needed to load the profiler UI.
+  repository: https://github.com/mstange/samply
+  documentation: https://github.com/mstange/samply
+
+extra:
+  recipe-maintainers:
+    - # Add your GitHub username when submitting to conda-forge
