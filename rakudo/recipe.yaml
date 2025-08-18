@@ -11,6 +11,7 @@ source:
   sha256: 202164a266f43091fde1f8cb22fdc45d9cfa03e9961aee708ba92b6d29087a72
 
 build:
+  number: 1
   # Important: do NOT let rattler rewrite .moarvm bytecode
   prefix_detection:
     ignore:
@@ -26,7 +27,7 @@ build:
 
     # Use the NQP and MoarVM from the host env explicitly
     perl Configure.pl \
-      --backend=moar \
+      --backends=moar \
       --prefix="$PREFIX" \
       --with-nqp="$(which nqp)"
     make -j${CPU_COUNT}
@@ -68,18 +69,18 @@ build:
     fi
     # Where rakudo installs its runtime tree
     if [ -d "${_PFX}/share/perl6/runtime" ]; then
-      RAKU_HOME="${_PFX}/share/perl6"
+      export RAKUDO_HOME="${_PFX}/share/perl6"
     else
-      RAKU_HOME="${_PFX}/share/rakudo"
+      export RAKUDO_HOME="${_PFX}/share/rakudo"
     fi
     # NQP runtime (needed on libpath)
     NQP_HOME="${NQP_HOME:-${_PFX}/share/nqp}"
     MOAR="${MOAR:-moar}"
     exec "$MOAR" \
       --libpath="${NQP_HOME}/lib" \
-      --libpath="${RAKU_HOME}/lib" \
-      --libpath="${RAKU_HOME}/runtime" \
-      "${RAKU_HOME}/runtime/rakudo.moarvm" "$@"
+      --libpath="${RAKUDO_HOME}/lib" \
+      --libpath="${RAKUDO_HOME}/runtime" \
+      "${RAKUDO_HOME}/runtime/rakudo.moarvm" "$@"
     EOF
     chmod +x "$PREFIX/bin/raku"
     ln -sf raku "$PREFIX/bin/rakudo"
@@ -96,7 +97,21 @@ requirements:
   run_exports:
     - ${{ pin_subpackage("rakudo", exact=True) }}
 
+# Not reproducible, complains that it cannot find executable. Compiles
+# only when environment is manually loaded.
 tests:
   - script:
       - raku -e 'say("Hello from Raku")'
       - out=$(raku -e 'say 40+2'); test "$out" = "42"
+      - rakudo-debug --version
+      - rakudo-debug-m --version
+      - perl6 --version
+      - perl6-debug --version
+      - perl6-m --version
+      - perl6-debug-m --version
+      - rakudo-m --version
+      - raku --version
+      - rakudo --version
+    requirements:
+      run:
+        - addr2line-rust

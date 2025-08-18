@@ -22,6 +22,7 @@ requirements:
   build:
     - ${{ compiler("c") }}
     - pkgconf
+    - mimalloc
   host:
     - libtommath
     - mimalloc
@@ -37,6 +38,8 @@ requirements:
   run_exports:
     - ${{ pin_subpackage("moarvm", exact=True) }}
 
+# Not reproducible, complains that it cannot find executable. Compiles
+# only when environment is manually loaded.
 tests:
   - script:
     - moar --version

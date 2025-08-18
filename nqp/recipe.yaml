@@ -69,6 +69,8 @@ requirements:
   run_exports:
     - ${{ pin_subpackage("nqp", exact=True) }}
 
+# Not reproducible, complains that it cannot find executable. Compiles
+# only when environment is manually loaded.
 tests:
   - script:
       - nqp -e 'say("Hello from NQP")'

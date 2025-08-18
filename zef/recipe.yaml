@@ -1,0 +1,54 @@
+context:
+  name: "zef"
+  version: "1.0.0"       # latest as of 2025-04-14
+
+package:
+  name: ${{ name|lower }}
+  version: ${{ version }}
+
+source:
+  url: https://github.com/ugexe/${{ name }}/archive/refs/tags/v${{ version }}.tar.gz
+  sha256: 0bbf74f19118948d5869c7b4e110abf91f7f45e3d9be3e99d8c9908d1168000d
+
+build:
+  # We deliberately avoid generating .moarvm during build, so no prefix_detection tweaks needed.
+  script: |
+    set -euxo pipefail
+    export RAKUDO_HOME="$(raku -e 'printf %*ENV{"RAKUDO_HOME"}')"
+    raku -Ilib bin/zef --installed list perl
+    # sanity check the core repo
+    raku -e 'use NativeCall; use JSON::Fast; say "core repos visible"'
+    raku -Ilib bin/zef install . --/test -to="inst#${PREFIX}" --verbose
+    # # Install zef from its sources into THIS package's 'site' repo.
+    # # We rely on your rakudo wrapper: it honors PREFIX if set.
+    # PREFIX="$PREFIX" raku -I. bin/zef \
+    #   --/test --/depends --/build-depends --/update --/precompile-install \
+    #   install . -to=site
+
+    # # Put zef on PATH: our “site/bin” script uses `#!/usr/bin/env raku` already.
+    # mkdir -p "$PREFIX/bin"
+    # ln -sf ../share/perl6/site/bin/zef "$PREFIX/bin/zef"
+
+  # prefix_detection:
+  #   ignore:
+  #     - share/perl6/site/precomp/**/*.moarvm
+
+
+requirements:
+  build:
+    - rakudo
+  host:
+    - rakudo
+  run:
+    - rakudo
+    # Optional but practical for real-world use (zef fetchers/extractors):
+    - curl
+    - git
+    - tar
+    - unzip
+
+tests:
+  - script:
+      - zef --version
+      - zef --help
+      - zef --installed list
